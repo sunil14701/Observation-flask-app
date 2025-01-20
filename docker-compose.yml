@@ -1,0 +1,31 @@
+services:
+  flask-app:
+    build: .
+    container_name: flask-app
+    environment:
+      - OTEL_SERVICE_NAME=users-service
+      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+      - OTEL_TRACES_EXPORTER=otlp,console
+      - OTEL_METRICS_EXPORTER=otlp,console
+      - OTEL_LOGS_EXPORTER=otlp,console
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_TRACES_INSECURE=true
+      - OTEL_EXPORTER_OTLP_METRICS_INSECURE=true
+      - OTEL_EXPORTER_OTLP_LOGS_INSECURE=true
+    ports:
+      - "5000:5000"
+    depends_on:
+      - otel-collector
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP http receiver
+      - "13133:13133" # Health check extension
