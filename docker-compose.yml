@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   flask-app:
     build: .
@@ -16,6 +18,8 @@ services:
       - OTEL_EXPORTER_OTLP_LOGS_INSECURE=true
     ports:
       - "5000:5000"
+    networks:
+      - telemetry-network
     depends_on:
       - otel-collector
 
@@ -29,6 +33,35 @@ services:
       - "4317:4317"   # OTLP gRPC receiver
       - "4318:4318"   # OTLP http receiver
       - "13133:13133" # Health check extension
+    networks:
+      - telemetry-network
+
+
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:8.6.2
+    container_name: apm-server
+    environment:
+      - ELASTICSEARCH_HOST=https://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=pass123
+      - ELASTICSEARCH_SSL_VERIFICATION_MODE=none
+      - logging.level=debug
+    # command: >
+    #   apm-server -e
+    #     -E apm-server.host=0.0.0.0:8200
+    #     -E apm-server.protocol=http
+    #     -E output.elasticsearch.hosts=["https://elasticsearch:9200"]
+    #     -E output.elasticsearch.username=elastic
+    #     -E output.elasticsearch.password=changeme
+    #     -E output.elasticsearch.ssl.verification_mode=none
+    ports:
+      - "8200:8200"
+    networks:
+      - telemetry-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
@@ -37,38 +70,75 @@ services:
       - discovery.type=single-node
       - ELASTIC_USERNAME=elastic        
       - ELASTIC_PASSWORD=pass123  
-      
     ports:
       - "9200:9200"
+    networks:
+      - telemetry-network
+    healthcheck:
+      test: curl -k -u elastic:pass123 https://elasticsearch:9200 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  apm-server:
-    image: docker.elastic.co/apm/apm-server:8.6.2
-    container_name: apm-server
-    environment:
-      - ELASTICSEARCH_HOST=https://elasticsearch:9200/
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=pass123
-    ports:
-      - "8200:8200"
-    depends_on:
-      - elasticsearch
-    
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.6.2
-    container_name: kibana
-    environment:
-      - ELASTICSEARCH_HOST=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=pass123
-    ports:
-      - "5601:5601"
+  # kibana:
+  #   image: docker.elastic.co/kibana/kibana:8.6.2
+  #   container_name: kibana
+  #   environment:
+  #     - ELASTICSEARCH_HOST=https://elasticsearch:9200
+  #     - ELASTICSEARCH_USERNAME=elastic
+  #     - ELASTICSEARCH_PASSWORD=pass123
+  #     - ELASTICSEARCH_SSL_VERIFICATION_MODE=none
+  #   ports:
+  #     - "5601:5601"
+  #   networks:
+  #     - telemetry-network
+  #   depends_on:
+  #     - elasticsearch
 
-# run docker compose
-# docker-compose down
-# docker-compose up -d
+networks:
+  telemetry-network:
+    driver: bridge
 
-# see logs for container
-# docker logs apm-server
 
-# get into container of service
-# docker exec -it apm-server bash, docker exec -u 0 -it apm-server bash -> as root
+# # run docker compose
+# # docker-compose down
+# # docker-compose up -d
+
+# # see logs for container
+# # docker logs apm-server
+
+# # get into container of service
+# # docker exec -it apm-server bash, docker exec -u 0 -it apm-server bash -> as root  expalin me this docker file usecase
+
+# # update packages
+# # apt-get update
+# # apt-get install curl
+
+# # check elastic search via apm container
+# # curl -k -u elastic:pass123 https://elasticsearch:9200
+
+# # manually create a elastic search index
+# # curl -u elastic:pass123 -k -X PUT "https://localhost:9200/my_index?pretty"
+
+
+# send payload to apm server -> 200 status code
+# curl -X POST http://localhost:8200/v1/traces -H "Content-Type: application/json" -d '{
+#   "resourceSpans": [{
+#     "resource": {
+#       "attributes": [{
+#         "key": "service.name",
+#         "value": { "stringValue": "test-service" }
+#       }]
+#     },
+#     "scopeSpans": [{
+#       "spans": [{
+#         "traceId": "5B8EFFF798038103D269B633813FC60C",
+#         "spanId": "EEE19B7EC3C1B174",
+#         "name": "test-span",
+#         "kind": 1,
+#         "startTimeUnixNano": "1615534190000000000",
+#         "endTimeUnixNano": "1615534190000000000"
+#       }]
+#     }]
+#   }]
+# }'
