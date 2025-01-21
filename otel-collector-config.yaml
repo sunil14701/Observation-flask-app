@@ -15,6 +15,11 @@ exporters:
   debug:
     verbosity: detailed
 
+  otlp:
+    endpoint: "apm-server:8200"  
+    tls:
+      insecure: true 
+
 extensions:
   health_check:
     endpoint: 0.0.0.0:13133
@@ -25,12 +30,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [otlp, debug]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [otlp, debug]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [otlp, debug]

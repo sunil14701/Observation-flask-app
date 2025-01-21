@@ -29,3 +29,46 @@ services:
       - "4317:4317"   # OTLP gRPC receiver
       - "4318:4318"   # OTLP http receiver
       - "13133:13133" # Health check extension
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ELASTIC_USERNAME=elastic        
+      - ELASTIC_PASSWORD=pass123  
+      
+    ports:
+      - "9200:9200"
+
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:8.6.2
+    container_name: apm-server
+    environment:
+      - ELASTICSEARCH_HOST=https://elasticsearch:9200/
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=pass123
+    ports:
+      - "8200:8200"
+    depends_on:
+      - elasticsearch
+    
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.6.2
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOST=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=pass123
+    ports:
+      - "5601:5601"
+
+# run docker compose
+# docker-compose down
+# docker-compose up -d
+
+# see logs for container
+# docker logs apm-server
+
+# get into container of service
+# docker exec -it apm-server bash, docker exec -u 0 -it apm-server bash -> as root
