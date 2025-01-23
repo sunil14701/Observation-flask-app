@@ -6,10 +6,10 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
 
-processors:
-  batch:
-    timeout: 1s
-    send_batch_size: 1024
+# processors:
+#   batch:
+#     timeout: 10s
+#     send_batch_size: 1024
 
 exporters:
   debug:
@@ -29,13 +29,13 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [batch]
+      # processors: [batch]
       exporters: [otlphttp,debug]
     metrics:
       receivers: [otlp]
-      processors: [batch]
+      # processors: [batch]
       exporters: [otlphttp,debug]
     logs:
       receivers: [otlp]
-      processors: [batch]
+      # processors: [batch]
       exporters: [otlphttp,debug]

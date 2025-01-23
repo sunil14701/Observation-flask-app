@@ -34,12 +34,10 @@ services:
       - "13133:13133" # Health check extension
     networks:
       - telemetry-network
-    depends_on:
-      - apm-server
     
 
   apm-server:
-    image: docker.elastic.co/apm/apm-server:8.6.2
+    image: docker.elastic.co/apm/apm-server:8.17.1
     container_name: apm-server
     # environment:
     #   - ELASTICSEARCH_HOST=http://elasticsearch:9200
@@ -49,19 +47,32 @@ services:
       # - ELASTICSEARCH_PASSWORD=pass1234
     command: >
        apm-server -e
-         -E apm-server.rum.enabled=true
-         -E setup.kibana.host=http://kibana:5601
-         -E setup.template.settings.index.number_of_replicas=0
-         -E apm-server.kibana.enabled=true
          -E apm-server.host=0.0.0.0:8200
+         -E apm-server.rum.enabled=true
          -E setup.template.enabled=true
          -E setup.template.overwrite=true
-         -E setup.kibana.enabled=true
+         -E setup.template.settings.index.number_of_replicas=0
          -E output.elasticsearch.hosts=["http://elasticsearch:9200"]
          -E output.elasticsearch.username=elastic
          -E output.elasticsearch.password=pass123
          -E output.elasticsearch.protocol=http
          -E output.elasticsearch.ssl.enabled=false
+    # command: >
+    #    apm-server -e
+    #     #  -E setup.kibana.enabled=true
+    #     #  -E setup.kibana.host=http://kibana:5601
+    #      -E apm-server.host=0.0.0.0:8200
+    #      -E apm-server.rum.enabled=true
+    #     #  -E apm-server.kibana.enabled=true
+    #      -E setup.template.enabled=true
+    #      -E setup.template.overwrite=true
+    #      -E setup.template.settings.index.number_of_replicas=0
+    #      -E output.elasticsearch.hosts=["http://elasticsearch:9200"]
+    #      -E output.elasticsearch.username=elastic
+    #      -E output.elasticsearch.password=pass123
+    #      -E output.elasticsearch.protocol=http
+    #      -E output.elasticsearch.ssl.enabled=false
+    #      -E logging.level=error
     ports:
       - "8200:8200"
     networks:
@@ -70,13 +81,19 @@ services:
     #   interval: 10s
     #   retries: 120
       # test: curl -I --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null https://localhost:8200/
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
+    # depends_on:
+    #   elasticsearch:
+    #     condition: service_healthy
+    #   kibana:
+    #     condition: service_healthy
+    healthcheck:
+      test: curl -s http://localhost:8200 || exit 1
+      interval: 10s
+      retries: 5
 
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.1
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
@@ -90,7 +107,7 @@ services:
       - cluster.name=elasticsearch
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-
+      - logger.level=info
     ports:
       - "9200:9200"
     networks:
@@ -121,14 +138,18 @@ services:
     #     }'"
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.6.2
+    image: docker.elastic.co/kibana/kibana:8.17.1
     container_name: kibana
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTIC_APM_ACTIVE=true
-      - ELASTIC_APM_SERVER_URL=http://apm-server:8200
-      - ELASTICSEARCH_USERNAME=demo-user
-      - ELASTICSEARCH_PASSWORD=pass1234
+    # environment:
+    #   - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    #   - ELASTICSEARCH_USERNAME=demo-user
+    #   - ELASTICSEARCH_PASSWORD=pass1234
+    # environment:
+    #   - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    #   - ELASTIC_APM_ACTIVE=true
+    #   - ELASTIC_APM_SERVER_URL=http://apm-server:8200
+    #   - ELASTICSEARCH_USERNAME=demo-user
+    #   - ELASTICSEARCH_PASSWORD=pass1234
     ports:
       - "5601:5601"
     volumes:
@@ -138,9 +159,13 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+    # healthcheck:
+    #   test: curl --silent --fail http://localhost:5601/api/status || exit 1
+    #   interval: 10s
+    #   retries: 5
 
 # setup:
-#   image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
+#   image: docker.elastic.co/elasticsearch/elasticsearch:8.17.1
 #   volumes:
 #     - certs:/usr/share/elasticsearch/config/certs
 #   user: "0"
@@ -222,23 +247,42 @@ volumes:
 # list all the indexs 
 # curl -k -u elastic:pass123 https://elasticsearch:9200/_cat/indices?v
 
-# #create a role in elasticsearch 
-# general role
-# curl -X POST "http://localhost:9200/_security/role/read_write_role" -H "Content-Type: application/json" -u "elastic:pass123" -d "{\"cluster\": [\"all\"], \"index\": [{\"names\": [\"*\"], \"privileges\": [\"read\", \"write\"]}], \"applications\": [], \"run_as\": []}"
-# kibana role
-# curl -X POST "http://localhost:9200/_security/role/kibana_custom_admin" -u "elastic:pass123" -H "Content-Type: application/json" -d "{\"cluster\": [\"all\"], \"index\": [{\"names\": [\".kibana*\", \".kibana_8.6.2\"], \"privileges\": [\"view_index_metadata\", \"manage\", \"all\"]}]}"
 
+
+#  in browser check users 
+# http://localhost:9200/_security/user 
+
+#  in browset check role info
+# http://localhost:9200/_security/role/kibana_custom_admin 
+
+# kibana_system  password update 
+# curl -X POST "http://localhost:9200/_security/user/kibana_system/_password" -u elastic:pass123 -H "Content-Type: application/json" -d "{\"password\": \"pass1234\"}"
+#same goes for apm server user- chagne its password 
+
+
+# no need
+# super user
+# curl -X PUT "http://localhost:9200/_security/user/demo-user" ^
+# -u "elastic:pass123" ^
+# -H "Content-Type: application/json" ^
+# -d "{\"roles\": [\"kibana_custom_admin\"], \"password\": \"pass1234\"}" 
 
 
 # check roles
 #  curl -X GET "http://localhost:9200/_security/role/read_write_role" -u "elastic:pass123"
-# http://localhost:9200/_security/role/kibana_custom_admin -> in browset check role info
+
 
 # create a user
-# curl -X POST "http://localhost:9200/_security/user/demo-user" -H "Content-Type: application/json" -u "elastic:pass123" -d "{\"password\": \"pass1234\", \"roles\": [\"read_write_role\", \"kibana_admin\"]}"
-
-# http://localhost:9200/_security/user -> in browser check users 
+# curl -X POST "http://localhost:9200/_security/user/demo-user" -H "Content-Type: application/json" -u "elastic:pass123" -d "{\"password\": \"pass1234\", \"roles\": [\"kibana_admin\"]}"
 
 
+# delete roles
+# curl -X DELETE "http://localhost:9200/_security/role/kibana_custom_admin" ^ -u "elastic:pass123"
 
-
+# #create a role in elasticsearch 
+# kibana role demo-user
+# all indices privialiges  
+# curl -X POST "http://localhost:9200/_security/role/kibana_custom_admin" ^
+# -u "elastic:pass123" ^
+# -H "Content-Type: application/json" ^
+# -d "{\"cluster\": [\"all\"], \"indices\": [{\"names\": [\"*\",\".kibana*\", \".kibana_ingest*\",\".kibana_alerting_cases*\"], \"privileges\": [\"create_index\", \"manage\", \"all\"]}], \"applications\": [{\"application\": \"kibana-.kibana\", \"privileges\": [\"all\"], \"resources\": [\"*\"]}]}"

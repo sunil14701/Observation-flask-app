@@ -1,10 +1,18 @@
-server.host: 0.0.0.0
+server.host: "0.0.0.0"
+server.port: 5601
 status.allowAnonymous: true
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+elasticsearch.username: "kibana_system"
+elasticsearch.password: "pass1234"
 monitoring.ui.container.elasticsearch.enabled: true
+logging.root.level: debug
 telemetry.enabled: false
 xpack.security.encryptionKey: fhjskloppd678ehkdfdlliverpoolfcr
 xpack.encryptedSavedObjects.encryptionKey: fhjskloppd678ehkdfdlliverpoolfcr
 
-xpack.fleet.packages:
-  - name: apm
-    version: latest
+# xpack.fleet.packages:
+#   - name: apm
+#     version: latest
+
+# reference
+# https://github.com/elastic/kibana/blob/main/config/kibana.yml
