@@ -7,5 +7,9 @@ Run the services defined in your `docker-compose.yml`:
 docker-compose up
 docker-compose down
 
+## head to kibana URL to see telemetry data
+http://localhost:5601/app/apm/services/users-service/
+
+
 
 
