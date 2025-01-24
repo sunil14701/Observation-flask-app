@@ -9,6 +9,8 @@ docker-compose down
 
 ## head to kibana URL to see telemetry data
 http://localhost:5601/app/apm/services/users-service/
+# admin username: elastic
+# admin password: pass123
 
 
 
