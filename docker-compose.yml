@@ -1,5 +1,111 @@
+networks:
+  telemetry-network:
+    driver: bridge
+
+volumes:
+  certs:
+    driver: local
 
 services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.1
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.authc.api_key.enabled=true
+      - ELASTICSEARCH_USERNAME=elastic        
+      - ELASTIC_PASSWORD=pass123  
+      - node.name=elasticsearch
+      - path.logs=/var/log/
+      - cluster.name=elasticsearch
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - logger.level=debug
+    ports:
+      - "9200:9200"
+    networks:
+      - telemetry-network
+    healthcheck:
+      test: curl -k -u elastic:pass123 http://localhost:9200 || exit 1
+      interval: 10s
+      retries: 5
+
+  bootstrap:
+    image: ubuntu:20.04
+    container_name: bootstrap
+    volumes:
+      - ./bootstrap.sh:/usr/local/bin/bootstrap.sh
+    entrypoint: ["/bin/bash", "/usr/local/bin/bootstrap.sh"]
+    networks:
+      - telemetry-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.17.1
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    volumes:
+      - ./kibana.yml:/usr/share/kibana/config/kibana.yml
+    networks:
+      - telemetry-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:8.17.1
+    container_name: apm-server
+    command: >
+       apm-server -e
+         -E apm-server.host=0.0.0.0:8200
+         -E apm-server.rum.enabled=true
+         -E setup.template.enabled=true
+         -E setup.template.overwrite=true
+         -E setup.template.settings.index.number_of_replicas=0
+         -E output.elasticsearch.hosts=["http://elasticsearch:9200"]
+         -E output.elasticsearch.username=elastic
+         -E output.elasticsearch.password=pass123
+         -E output.elasticsearch.protocol=http
+         -E output.elasticsearch.ssl.enabled=false
+    ports:
+      - "8200:8200"
+    networks:
+      - telemetry-network
+    # healthcheck:
+    #   test: curl -s http://localhost:8200 || exit 1
+    #   interval: 1s
+      # timeout: 10s
+      # retries: 5
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP http receiver
+      - "13133:13133" # Health check extension
+    networks:
+      - telemetry-network
+    # healthcheck:
+    #   test: curl  http://localhost:13133 || exit 1
+    #   interval: 10s
+    #   # timeout: 10s
+    #   retries: 5
+    # depends_on:
+    #   apm-server:
+    #     condition: service_healthy
+
   flask-app:
     build: .
     container_name: flask-app
@@ -19,177 +125,22 @@ services:
       - "5000:5000"
     networks:
       - telemetry-network
-    depends_on:
-      - otel-collector
-
-  otel-collector:
-    image: otel/opentelemetry-collector:latest
-    container_name: otel-collector
-    command: ["--config=/etc/otel-collector-config.yaml"]
-    volumes:
-      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
-    ports:
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP http receiver
-      - "13133:13133" # Health check extension
-    networks:
-      - telemetry-network
-    
-
-  apm-server:
-    image: docker.elastic.co/apm/apm-server:8.17.1
-    container_name: apm-server
-    # environment:
-    #   - ELASTICSEARCH_HOST=http://elasticsearch:9200
-    #   - ELASTICSEARCH_SSL_VERIFICATION_MODE=none
-    #   - logging.level=debug
-      # - ELASTICSEARCH_USERNAME=demo-user
-      # - ELASTICSEARCH_PASSWORD=pass1234
-    command: >
-       apm-server -e
-         -E apm-server.host=0.0.0.0:8200
-         -E apm-server.rum.enabled=true
-         -E setup.template.enabled=true
-         -E setup.template.overwrite=true
-         -E setup.template.settings.index.number_of_replicas=0
-         -E output.elasticsearch.hosts=["http://elasticsearch:9200"]
-         -E output.elasticsearch.username=elastic
-         -E output.elasticsearch.password=pass123
-         -E output.elasticsearch.protocol=http
-         -E output.elasticsearch.ssl.enabled=false
-    # command: >
-    #    apm-server -e
-    #     #  -E setup.kibana.enabled=true
-    #     #  -E setup.kibana.host=http://kibana:5601
-    #      -E apm-server.host=0.0.0.0:8200
-    #      -E apm-server.rum.enabled=true
-    #     #  -E apm-server.kibana.enabled=true
-    #      -E setup.template.enabled=true
-    #      -E setup.template.overwrite=true
-    #      -E setup.template.settings.index.number_of_replicas=0
-    #      -E output.elasticsearch.hosts=["http://elasticsearch:9200"]
-    #      -E output.elasticsearch.username=elastic
-    #      -E output.elasticsearch.password=pass123
-    #      -E output.elasticsearch.protocol=http
-    #      -E output.elasticsearch.ssl.enabled=false
-    #      -E logging.level=error
-    ports:
-      - "8200:8200"
-    networks:
-      - telemetry-network
-    # healthcheck:
-    #   interval: 10s
-    #   retries: 120
-      # test: curl -I --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null https://localhost:8200/
     # depends_on:
-    #   elasticsearch:
+    #   otel-collector:
     #     condition: service_healthy
-    #   kibana:
-    #     condition: service_healthy
-    healthcheck:
-      test: curl -s http://localhost:8200 || exit 1
-      interval: 10s
-      retries: 5
 
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.1
-    container_name: elasticsearch
-    environment:
-      - discovery.type=single-node
-      - bootstrap.memory_lock=true
-      - xpack.security.enabled=true
-      - xpack.security.authc.api_key.enabled=true
-      - ELASTICSEARCH_USERNAME=elastic        
-      - ELASTIC_PASSWORD=pass123  
-      - node.name=elasticsearch
-      - path.logs=/var/log/
-      - cluster.name=elasticsearch
-      - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - logger.level=info
-    ports:
-      - "9200:9200"
-    networks:
-      - telemetry-network
-    healthcheck:
-      test: curl -k -u elastic:pass123 http://elasticsearch:9200 || exit 1
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    # user: root
-    # command: >
-    #   bash -c "
-    #     sleep 30 && \
-    #     # Run as root to install curl
-    #     apt-get update && apt-get install -y curl && \
-    #     # Create a role in Elasticsearch
-    #     curl -X POST 'http://localhost:9200/_security/role/read_write_role' -H 'Content-Type: application/json' -u 'elastic:pass123' -d '{
-    #       \"cluster\": [\"all\"], 
-    #       \"index\": [{\"names\": [\"*\"], \"privileges\": [\"read\", \"write\"]}],
-    #       \"applications\": [], 
-    #       \"run_as\": []}' && \
-    #     # Check the created role
-    #     curl -X GET 'http://localhost:9200/_security/role/read_write_role' -u 'elastic:pass123' && \
-    #     # Create a user and assign the role to the user
-    #     curl -X POST 'http://localhost:9200/_security/user/demo-user' -H 'Content-Type: application/json' -u 'elastic:pass123' -d '{
-    #       \"password\": \"pass1234\",
-    #       \"roles\": [\"read_write_role\"]
-    #     }'"
 
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.17.1
-    container_name: kibana
-    # environment:
-    #   - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    #   - ELASTICSEARCH_USERNAME=demo-user
-    #   - ELASTICSEARCH_PASSWORD=pass1234
-    # environment:
-    #   - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    #   - ELASTIC_APM_ACTIVE=true
-    #   - ELASTIC_APM_SERVER_URL=http://apm-server:8200
-    #   - ELASTICSEARCH_USERNAME=demo-user
-    #   - ELASTICSEARCH_PASSWORD=pass1234
-    ports:
-      - "5601:5601"
-    volumes:
-      - ./kibana.yml:/usr/share/kibana/config/kibana.yml
-    networks:
-      - telemetry-network
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    # healthcheck:
-    #   test: curl --silent --fail http://localhost:5601/api/status || exit 1
-    #   interval: 10s
-    #   retries: 5
 
-# setup:
-#   image: docker.elastic.co/elasticsearch/elasticsearch:8.17.1
-#   volumes:
-#     - certs:/usr/share/elasticsearch/config/certs
-#   user: "0"
-#   command: >
-#     bash -c '
-#       echo "Waiting for Elasticsearch availability";
-#       until curl -s http://elasticsearch:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
-#       echo "Setting kibana_system password";
-#       until curl -s -X POST  -u "elastic:change_me" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"change_me\"}" | grep -q "^{}"; do sleep 10; done;
-#       echo "All done!";
-#     '
-#   healthcheck:
-#     test: ["CMD-SHELL", "[ -f config/certs/elasticsearch/elasticsearch.crt ]"]
-#     interval: 1s
-#     timeout: 5s
-#     retries: 120
+  
 
-networks:
-  telemetry-network:
-    driver: bridge
+  
 
-volumes:
-  certs:
-    driver: local
+  
+
+  
+
+
 
 
 # # run docker compose
@@ -257,7 +208,6 @@ volumes:
 
 # kibana_system  password update 
 # curl -X POST "http://localhost:9200/_security/user/kibana_system/_password" -u elastic:pass123 -H "Content-Type: application/json" -d "{\"password\": \"pass1234\"}"
-#same goes for apm server user- chagne its password 
 
 
 # no need
