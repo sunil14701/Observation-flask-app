@@ -12,8 +12,7 @@ docker-compose down
 http://localhost:5601/app/apm/services/flask-app/
 
 ## to see the flame graph. head to flask-app -> transactions -> your app route
-![flame graph](./static/main_timeline.PNG)
-
+![flame graph](./static/timeline.jpg)
 
 
 
