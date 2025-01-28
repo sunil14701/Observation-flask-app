@@ -1,5 +1,4 @@
 #!/bin/bash
-
 apt-get update  
 
 apt-get install -y curl
@@ -11,3 +10,5 @@ curl -X POST "http://elasticsearch:9200/_security/user/kibana_system/_password" 
     -d '{"password": "pass1234"}'
 
 echo "Bootstrap script executed successfully!"
+
+# dos2unix bootstrap.sh ## remove newline window char

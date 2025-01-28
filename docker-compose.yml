@@ -8,7 +8,9 @@ volumes:
 
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.1
+    build:
+      context: ./elasticsearch
+      dockerfile: Dockerfile
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
@@ -22,15 +24,15 @@ services:
       - cluster.name=elasticsearch
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - logger.level=debug
+      - logger.level=error
     ports:
       - "9200:9200"
     networks:
       - telemetry-network
     healthcheck:
-      test: curl -k -u elastic:pass123 http://localhost:9200 || exit 1
+      test: curl -k -u elastic:pass123 http://localhost:9200/_cluster/health || exit 1
       interval: 10s
-      retries: 5
+      retries: 10
 
   bootstrap:
     image: ubuntu:20.04
@@ -45,7 +47,9 @@ services:
         condition: service_healthy
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.17.1
+    build:
+      context: ./kibana
+      dockerfile: Dockerfile
     container_name: kibana
     ports:
       - "5601:5601"
@@ -53,12 +57,19 @@ services:
       - ./kibana.yml:/usr/share/kibana/config/kibana.yml
     networks:
       - telemetry-network
+    # healthcheck:
+    #   test: curl -s http://localhost:5601 || exit 1
+    #   interval: 10s
+    #   # timeout: 10s
+    #   retries: 25
     depends_on:
       elasticsearch:
         condition: service_healthy
 
   apm-server:
-    image: docker.elastic.co/apm/apm-server:8.17.1
+    build:
+      context: ./apm-server
+      dockerfile: Dockerfile
     container_name: apm-server
     command: >
        apm-server -e
@@ -76,11 +87,11 @@ services:
       - "8200:8200"
     networks:
       - telemetry-network
-    # healthcheck:
-    #   test: curl -s http://localhost:8200 || exit 1
-    #   interval: 1s
-      # timeout: 10s
-      # retries: 5
+    healthcheck:
+      test: curl -s http://localhost:8200 || exit 1
+      interval: 1s
+      timeout: 10s
+      retries: 5
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -97,20 +108,15 @@ services:
       - "13133:13133" # Health check extension
     networks:
       - telemetry-network
-    # healthcheck:
-    #   test: curl  http://localhost:13133 || exit 1
-    #   interval: 10s
-    #   # timeout: 10s
-    #   retries: 5
-    # depends_on:
-    #   apm-server:
-    #     condition: service_healthy
+    depends_on:
+      apm-server:
+        condition: service_healthy
 
   flask-app:
-    build: .
+    build: ./flask_app
     container_name: flask-app
     environment:
-      - OTEL_SERVICE_NAME=users-service
+      - OTEL_SERVICE_NAME=flask-app
       - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
       - OTEL_TRACES_EXPORTER=otlp,console
       - OTEL_METRICS_EXPORTER=otlp,console
@@ -125,9 +131,6 @@ services:
       - "5000:5000"
     networks:
       - telemetry-network
-    # depends_on:
-    #   otel-collector:
-    #     condition: service_healthy
 
 
 
@@ -144,8 +147,9 @@ services:
 
 
 # # run docker compose
-# # docker-compose down
+# docker-compose build --no-cache
 # # docker-compose up -d
+# # docker-compose down
 
 # # see logs for container
 # # docker logs apm-server
@@ -196,7 +200,7 @@ services:
   #  curl -k -u elastic:pass123 https://localhost:9200/my-index/_doc/1
 
 # list all the indexs 
-# curl -k -u elastic:pass123 https://elasticsearch:9200/_cat/indices?v
+# curl -k -u elastic:pass123 https://elasticsearch:9200/_cat/indices?v"
 
 
 
