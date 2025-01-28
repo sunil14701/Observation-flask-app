@@ -30,7 +30,7 @@ services:
     networks:
       - telemetry-network
     healthcheck:
-      test: curl -k -u elastic:pass123 http://localhost:9200/_cluster/health || exit 1
+      test: curl -k -u elastic:pass123 http://localhost:9200 || exit 1
       interval: 10s
       retries: 10
 
