@@ -57,11 +57,11 @@ services:
       - ./kibana.yml:/usr/share/kibana/config/kibana.yml
     networks:
       - telemetry-network
-    healthcheck:
-      test: curl -s http://localhost:5601 || exit 1
-      interval: 10s
-      # timeout: 10s
-      retries: 5
+    # healthcheck:
+    #   test: curl -s http://localhost:5601 || exit 1
+    #   interval: 10s
+    #   # timeout: 10s
+    #   retries: 25
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -127,7 +127,6 @@ services:
       - OTEL_EXPORTER_OTLP_TRACES_INSECURE=true
       - OTEL_EXPORTER_OTLP_METRICS_INSECURE=true
       - OTEL_EXPORTER_OTLP_LOGS_INSECURE=true
-
     ports:
       - "5000:5000"
     networks:
