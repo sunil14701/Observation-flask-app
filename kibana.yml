@@ -5,7 +5,7 @@ elasticsearch.hosts: ["http://elasticsearch:9200"]
 elasticsearch.username: "kibana_system"
 elasticsearch.password: "pass1234"
 monitoring.ui.container.elasticsearch.enabled: true
-logging.root.level: error
+logging.root.level: debug
 telemetry.enabled: false
 xpack.security.encryptionKey: fhjskloppd678ehkdfdlliverpoolfcr
 xpack.encryptedSavedObjects.encryptionKey: fhjskloppd678ehkdfdlliverpoolfcr
