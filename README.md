@@ -11,8 +11,8 @@ docker-compose down
 ## head to kibana URL to see telemetry data
 http://localhost:5601/app/apm/services/flask-app/
 
-## to see the flame graph. head to flask-app -> transactions -> your app route
-![flame graph](static\timeline.PNG)
+## to see the flame graph. head to kibana -> apm -> flask-app -> transactions -> your app route
+![alt text](static/main_timeline.PNG)
 
 
 
