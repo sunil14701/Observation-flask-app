@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 import requests
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from time import sleep
 # from opentelemetry.instrumentation.flask import FlaskInstrumentor
 # from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 # from opentelemetry.instrumentation.requests import RequestsInstrumentor
@@ -51,7 +52,13 @@ def hello_world():
 @app.route('/ping', methods=['GET'])
 def curl_google():
     try:
+        sleep(4)
         response = requests.get("https://www.google.com")
+        sleep(2)
+        response = requests.get("https://www.youtube.com")
+        sleep(1)
+        response = requests.get("https://api.open-meteo.com/v1/forecast?latitude=35&longitude=139&hourly=temperature_2m")
+        sleep(3)
         return jsonify(
             status_code=response.status_code,
             content='curl google result'
