@@ -13,7 +13,7 @@ http://localhost:5601/app/apm/services/flask-app/
 
 ## to see the flame graph. head to flask-app -> transactions -> your app route
 ![flame graph](./static/timeline.jpg)
-![alt text](https://github.com/[sunil14701]/[Observation-flask-app]/blob/[master]/timeline.jpg?raw=true)
+![alt text](https://github.com/sunil14701/Observation-flask-app/blob/master/static/timeline.jpg?raw=true)
 
 
 
