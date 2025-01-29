@@ -16,28 +16,40 @@ http://localhost:5601/app/apm/services/flask-app/
 ### To trace a particular application route: Head to flask-app -> transactions -> your app route
 ### a. Navigate to the Flask App -> Transactions -> Your app route.
 - Here is an example flame graph for the route. We used auto-instrumentation for Flask and the requests library to capture traces for a specific endpoint.
-- ![flame graph](static/1_main_timeline.PNG)
+<p align="center">
+  <img src="static/1_main_timeline.PNG" alt="flame graph" width="800">
+</p>
+
 
 <br>
 <br> 
 
 ### b. The image below displays all the metadata for the request, showing the telemetry data captured during the request's creation.
-- ![flame graph trans](static/main_meta.PNG)
+<p align="center">
+  <img src="static/main_meta.PNG" alt="flame graph trans" width="800">
+</p>
 
 <br>
 <br> 
 
 ### c. Below is the telemetry data for the first call to another microservice.(In this is its just curl request to google)
-- ![flame graph span 1](static/span_details.PNG)
+<p align="center">
+  <img src="static/span_details.PNG" alt="flame graph span 1" width="800">
+</p>
 
 <br> 
 <br>
 
 ### d. Below is the telemetry data for the second call to another microservice, which is a cURL request for the weather forecast.
-- ![flame graph span 2](static/span_details2.PNG)
+<p align="center">
+  <img src="static/span_details2.PNG" width="800" alt="Flame Graph Span 2">
+</p>
 
 <br>
 <br>
+
+## 4. View the Flame Graph for error produced
+
 
 
 
