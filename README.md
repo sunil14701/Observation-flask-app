@@ -1,5 +1,7 @@
  Install docker in your local and try out docker compose.
 
+## Stack version: 
+8.17.1
 
 ## 1. Docker Compose Commands
 Run the services defined in your `docker-compose.yml`:
@@ -11,6 +13,13 @@ docker-compose down
 
 ## 2. Head to kibana URL to see telemetry data
 http://localhost:5601/app/apm/services/flask-app/
+<br>
+<br>
+<p align="center">
+  <img src="./static/Hpipe/apm_service.PNG" width="800" alt=" postgress_span">
+</p>
+
+
 
 ## 3. View the Flame Graph (Trace a Specific Application)
 ### To trace a particular application route: Head to flask-app -> transactions -> your app route
