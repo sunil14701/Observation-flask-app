@@ -26,7 +26,7 @@ http://localhost:5601/app/apm/services/flask-app/
 
 ### b. The image below displays all the metadata for the request, showing the telemetry data captured during the request's creation.
 <p align="center">
-  <img src="static/main_meta.PNG" alt="flame graph trans" width="800">
+  <img src="static/main_meta.PNG" alt="main_meta" width="800">
 </p>
 
 <br>
@@ -34,7 +34,7 @@ http://localhost:5601/app/apm/services/flask-app/
 
 ### c. Below is the telemetry data for the first call to another microservice.(In this is its just curl request to google)
 <p align="center">
-  <img src="static/span_details.PNG" alt="flame graph span 1" width="800">
+  <img src="static/span_details.PNG" alt="span_details" width="800">
 </p>
 
 <br> 
@@ -42,13 +42,39 @@ http://localhost:5601/app/apm/services/flask-app/
 
 ### d. Below is the telemetry data for the second call to another microservice, which is a cURL request for the weather forecast.
 <p align="center">
-  <img src="static/span_details2.PNG" width="800" alt="Flame Graph Span 2">
+  <img src="static/span_details2.PNG" width="800" alt="span_details2">
 </p>
 
 <br>
 <br>
 
 ## 4. View the Flame Graph for error produced
+<p align="center">
+  <img src="./static/Hpipe/hpipe_failed_trans.PNG" width="800" alt="hpipe_failed_trans">
+</p>
+
+<br>
+<br>
+<p align="center">
+  <img src="./static/Hpipe/hpipe_trace_back.PNG" width="800" alt="hpipe_trace_back">
+</p>
+
+<br>
+<br>
+
+## 5. View the Flame Graph for tracing queries
+<p align="center">
+  <img src="./static/Hpipe/postgress_trace.PNG" width="800" alt="postgress_trace">
+</p>
+
+<br>
+<br>
+<p align="center">
+  <img src="./static/Hpipe/postgress_span.PNG" width="800" alt=" postgress_span">
+</p>
+
+<br>
+<br>
 
 
 
